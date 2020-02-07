@@ -1,0 +1,6 @@
+programs:
+  - silly.py
+  - silly.py
+  - silly.py
+rounds: 20
+image: "mikailbag/game-runner:v1.0.0"

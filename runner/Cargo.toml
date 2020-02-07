@@ -1,0 +1,22 @@
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.2
+
+[package]
+name = "runner"
+version = "0.1.0"
+authors = ["Mikail Bagishov <bagishov.mikail@yandex.ru>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.26"
+
+[package.metadata.wharf.builder]
+image = "rust"
+[package.metadata.wharf.output]
+image = "ubuntu:bionic"
+entrypoint = ["/usr/bin/runner"]
+pre-install-commands = [
+    {shell = "apt-get update  && apt-get install -y python3", display = "install languages"}
+]
+[[package.metadata.wharf.binary]]
+name = "runner"
+destination = "/usr/bin/runner"
