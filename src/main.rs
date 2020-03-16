@@ -1,5 +1,6 @@
 mod cfg;
 mod client;
+mod runner;
 
 use anyhow::{bail, Context, Result};
 use cfg::Config;
@@ -18,13 +19,16 @@ struct State {
     clients: Vec<Client>,
 }
 fn main() -> Result<()> {
+    if std::env::var("__RUN__").is_ok() {
+        return runner::runner_main()
+    }
     println!("loading config");
     let config = load_cfg().context("failed to load config")?;
     println!("Spawning clients");
     let mut clients = vec![];
     for program_path in &config.programs {
         clients.push(
-            client::Client::new(program_path, &config.image)
+            client::Client::new(program_path, config.image.as_deref())
                 .context("internal error when spawning bot")?,
         );
     }
@@ -45,6 +49,7 @@ fn main() -> Result<()> {
         }
     }
     for i in 0..state.clients.len() {
+        state.clients[i].send_end();
         println!(
             "Client #{} ({}) - {} points",
             i,

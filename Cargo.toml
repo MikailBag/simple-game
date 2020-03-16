@@ -1,14 +1,15 @@
-# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.2
-
 [package]
-name = "runner"
+name = "server"
 version = "0.1.0"
 authors = ["Mikail Bagishov <bagishov.mikail@yandex.ru>"]
 edition = "2018"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
 anyhow = "1.0.26"
-
+serde = {version = "1.0.104", features = ["derive"]}
+serde_yaml = "0.8.11"
 [package.metadata.wharf.builder]
 image = "rust"
 [package.metadata.wharf.output]

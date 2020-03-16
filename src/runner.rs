@@ -14,10 +14,10 @@ fn detect_kind(path: &Path) -> Result<CodeKind> {
     bail!("could not detect code kind for {}", path.display())
 }
 
-fn main() -> anyhow::Result<()> {
+pub(crate) fn runner_main() -> anyhow::Result<()> {
     let path = match std::env::args_os().nth(1) {
         None => {
-            eprintln!("path to file executed not given");
+            eprintln!("path to file to execute not given");
             std::process::exit(1);
         }
         Some(x) => std::path::PathBuf::from(x),

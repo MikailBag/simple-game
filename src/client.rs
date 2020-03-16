@@ -2,6 +2,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use std::io::{BufRead, Write};
+use std::path::Path;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -18,6 +19,8 @@ enum State {
     Step,
     /// Client waits for round results
     PostStep,
+    /// Client finished
+    End
 }
 #[derive(Debug)]
 pub(crate) struct Client {
@@ -49,7 +52,36 @@ impl Drop for Client {
 }
 
 impl Client {
-    pub(crate) fn new(path: &str, image: &str) -> Result<Client> {
+    fn from_child(mut child: std::process::Child, path: &Path) -> Client {
+        let stdout = Arc::new(Mutex::new(std::io::BufReader::new(
+            child.stdout.take().unwrap(),
+        )));
+        let stdin = Arc::new(Mutex::new(std::io::BufWriter::new(
+            child.stdin.take().unwrap(),
+        )));
+        Client {
+            child,
+            name: path.display().to_string(),
+            state: State::Init,
+            stdout,
+            num: 0xDEADBEEF,
+            stdin,
+        }
+    }
+
+    fn new_on_host(path: &str) -> Result<Client> {
+        let child = std::process::Command::new(std::env::current_exe()?)
+            .arg(path)
+            .env("__RUN__", "1")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()?;
+
+        Ok(Self::from_child(child, std::path::Path::new(path)))
+    }
+
+    fn new_docker(path: &str, image: &str) -> Result<Client> {
         let mut inner_path = std::path::PathBuf::new();
         inner_path.push("/src");
         let path = std::path::Path::new(path);
@@ -65,10 +97,11 @@ impl Client {
                 .display(),
             inner_path.display()
         );
-        let mut child = std::process::Command::new("docker")
+        let child = std::process::Command::new("docker")
             .arg("run")
             .arg("--interactive")
             .arg("--rm")
+            .arg("--env=__RUN__=1")
             .arg(mount_flag)
             .arg(image)
             .arg(inner_path)
@@ -76,20 +109,15 @@ impl Client {
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()?;
-        let stdout = Arc::new(Mutex::new(std::io::BufReader::new(
-            child.stdout.take().unwrap(),
-        )));
-        let stdin = Arc::new(Mutex::new(std::io::BufWriter::new(
-            child.stdin.take().unwrap(),
-        )));
-        Ok(Client {
-            child,
-            name: path.display().to_string(),
-            state: State::Init,
-            stdout,
-            num: 0xDEADBEEF,
-            stdin,
-        })
+
+        Ok(Self::from_child(child, path))
+    }
+
+    pub(crate) fn new(path: &str, image: Option<&str>) -> Result<Client> {
+        match image {
+            Some(img) => Self::new_docker(path, img),
+            None => Self::new_on_host(path),
+        }
     }
 
     pub(crate) fn is_init(&self) -> bool {
@@ -155,7 +183,7 @@ impl Client {
 
     pub(crate) fn poll(&mut self) {
         match self.state {
-            State::Error | State::Wait | State::PostStep => return,
+            State::Error | State::Wait | State::PostStep | State::End => return,
             State::Init | State::Step => (),
         };
         let line = match self.read_line() {
@@ -199,6 +227,14 @@ impl Client {
 
     pub(crate) fn get_num(&mut self) -> u32 {
         self.num
+    }
+
+    pub(crate) fn send_end(&mut self) {
+        if self.is_err() {
+            return;
+        }
+        self.send_line(b"end\n".to_vec());
+        self.state = State::End;
     }
 
     pub(crate) fn send_game(&mut self) {

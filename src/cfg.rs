@@ -3,5 +3,5 @@ use serde::Deserialize;
 pub(crate) struct Config {
     pub(crate) programs: Vec<String>,
     pub(crate) rounds: u32,
-    pub(crate) image: String,
+    pub(crate) image: Option<String>,
 }
