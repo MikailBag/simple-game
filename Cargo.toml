@@ -5,8 +5,6 @@ version = "0.1.0"
 authors = ["Mikail Bagishov <bagishov.mikail@yandex.ru>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = "1.0.26"
 serde = {version = "1.0.104", features = ["derive"]}
@@ -15,10 +13,10 @@ serde_yaml = "0.8.11"
 image = "rust"
 [package.metadata.wharf.output]
 image = "ubuntu:bionic"
-entrypoint = ["/usr/bin/runner"]
+entrypoint = ["/usr/bin/server"]
 pre-install-commands = [
     {shell = "apt-get update  && apt-get install -y python3", display = "install languages"}
 ]
 [[package.metadata.wharf.binary]]
-name = "runner"
-destination = "/usr/bin/runner"
+name = "server"
+destination = "/usr/bin/server"
