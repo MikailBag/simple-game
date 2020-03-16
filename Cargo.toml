@@ -1,3 +1,4 @@
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.2
 [package]
 name = "server"
 version = "0.1.0"
